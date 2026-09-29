@@ -1,5 +1,7 @@
 # Keybind Priority
 
+**[Download on Modrinth](https://modrinth.com/mod/keybind-priority)** · NeoForge · Minecraft 1.21 – 1.21.11 · client only
+
 Ever played a big modpack and pressed **V**, expecting to vein mine, and got the voice chat menu instead? Or
 both at once?
 

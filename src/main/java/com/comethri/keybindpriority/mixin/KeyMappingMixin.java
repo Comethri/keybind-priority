@@ -4,11 +4,13 @@ import com.comethri.keybindpriority.KeyFilter;
 import com.llamalad7.mixinextras.injector.ModifyReturnValue;
 import com.llamalad7.mixinextras.injector.wrapoperation.Operation;
 import com.llamalad7.mixinextras.injector.wrapoperation.WrapOperation;
+import com.llamalad7.mixinextras.sugar.Local;
 import com.mojang.blaze3d.platform.InputConstants;
 import net.minecraft.client.KeyMapping;
 import net.neoforged.neoforge.client.settings.KeyMappingLookup;
 import org.spongepowered.asm.mixin.Mixin;
 import org.spongepowered.asm.mixin.injection.At;
+import org.spongepowered.asm.mixin.injection.Group;
 
 import java.util.List;
 
@@ -26,13 +28,26 @@ public abstract class KeyMappingMixin {
         return KeyFilter.filter(original.call(lookup, key));
     }
 
-    @WrapOperation(method = "set", at = @At(value = "INVOKE",
+    // NeoForge 21.1.x later added a "releasing" flag to this lookup; older 21.0/21.1 builds call getAll(key).
+    // Exactly one of the two exists, the group makes sure one of them applies.
+    @Group(name = "keybindPriority$set", min = 1)
+    @WrapOperation(method = "set", require = 0, at = @At(value = "INVOKE",
             target = "Lnet/neoforged/neoforge/client/settings/KeyMappingLookup;getAll(Lcom/mojang/blaze3d/platform/InputConstants$Key;Z)Ljava/util/List;"))
     private static List<KeyMapping> keybindPriority$filterSet(KeyMappingLookup lookup, InputConstants.Key key,
                                                               boolean releasing, Operation<List<KeyMapping>> original) {
         List<KeyMapping> found = original.call(lookup, key, releasing);
         // Releasing always reaches everyone, so nothing can get stuck held down.
         return releasing ? found : KeyFilter.filter(found);
+    }
+
+    @Group(name = "keybindPriority$set", min = 1)
+    @WrapOperation(method = "set", require = 0, at = @At(value = "INVOKE",
+            target = "Lnet/neoforged/neoforge/client/settings/KeyMappingLookup;getAll(Lcom/mojang/blaze3d/platform/InputConstants$Key;)Ljava/util/List;"))
+    private static List<KeyMapping> keybindPriority$filterSetLegacy(KeyMappingLookup lookup, InputConstants.Key key,
+                                                                    Operation<List<KeyMapping>> original,
+                                                                    @Local(argsOnly = true) boolean down) {
+        List<KeyMapping> found = original.call(lookup, key);
+        return down ? KeyFilter.filter(found) : found;
     }
 
     @WrapOperation(method = "setAll", at = @At(value = "INVOKE",

@@ -29,12 +29,16 @@ public final class PriorityScreen extends Screen {
     private static final String LANG = "screen." + KeybindPriority.MOD_ID + ".";
     private static final int ROW_HEIGHT = 24;
     private static final int LIST_TOP = 56;
+    // Full ARGB: since 1.21.6 text with alpha 0 is invisible.
+    private static final int WHITE = 0xFFFFFFFF;
+    private static final int LIGHT_GRAY = 0xFFA0A0A0;
+    private static final int GRAY = 0xFF808080;
+    private static final int DARK_GRAY = 0xFF707070;
 
     private final InputConstants.Key key;
     private final List<KeyMapping> bindings = new ArrayList<>();
     private final List<String> disabled = new ArrayList<>();
     private boolean exclusive;
-    private BindingList list;
 
     public PriorityScreen(InputConstants.Key key) {
         super(Component.translatable(LANG + "title", key.getDisplayName()));
@@ -71,8 +75,7 @@ public final class PriorityScreen extends Screen {
             apply();
         }).bounds(width / 2 - 120, 30, 240, 20).build());
 
-        list = addRenderableWidget(new BindingList(minecraft, width, height - LIST_TOP - 32, LIST_TOP));
-        list.rebuild();
+        addRenderableWidget(new BindingList(minecraft, width, height - LIST_TOP - 32, LIST_TOP));
 
         addRenderableWidget(Button.builder(CommonComponents.GUI_DONE, b -> onClose())
                 .bounds(width / 2 - 100, height - 26, 200, 20).build());
@@ -95,22 +98,16 @@ public final class PriorityScreen extends Screen {
         rule.disabled.addAll(disabled);
     }
 
-    private void move(int index, int delta) {
-        int target = index + delta;
-        if (target < 0 || target >= bindings.size()) return;
+    private void move(int index, int target) {
+        if (index == target || target < 0 || target >= bindings.size()) return;
         bindings.add(target, bindings.remove(index));
         apply();
-        list.rebuild();
     }
 
-    private void moveToTop(int index) {
-        move(index, -index);
-    }
-
-    private void toggle(KeyMapping mapping) {
-        if (!disabled.remove(mapping.getName())) disabled.add(mapping.getName());
+    private void toggle(int index) {
+        String name = bindings.get(index).getName();
+        if (!disabled.remove(name)) disabled.add(name);
         apply();
-        list.rebuild();
     }
 
     /** Index of the binding that wins in exclusive mode (ignoring context), or -1. */
@@ -124,10 +121,10 @@ public final class PriorityScreen extends Screen {
     @Override
     public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
         super.render(graphics, mouseX, mouseY, partialTick);
-        graphics.drawCenteredString(font, title, width / 2, 8, 0xFFFFFF);
-        graphics.drawCenteredString(font, Component.translatable(LANG + "hint"), width / 2, 18, 0xA0A0A0);
+        graphics.drawCenteredString(font, title, width / 2, 8, WHITE);
+        graphics.drawCenteredString(font, Component.translatable(LANG + "hint"), width / 2, 18, LIGHT_GRAY);
         if (bindings.isEmpty()) {
-            graphics.drawCenteredString(font, Component.translatable(LANG + "empty"), width / 2, LIST_TOP + 20, 0xA0A0A0);
+            graphics.drawCenteredString(font, Component.translatable(LANG + "empty"), width / 2, LIST_TOP + 20, LIGHT_GRAY);
         }
     }
 
@@ -146,14 +143,9 @@ public final class PriorityScreen extends Screen {
     private final class BindingList extends ContainerObjectSelectionList<Row> {
         BindingList(Minecraft minecraft, int width, int height, int top) {
             super(minecraft, width, height, top, ROW_HEIGHT);
-        }
-
-        void rebuild() {
-            double scroll = getScrollAmount();
-            List<Row> rows = new ArrayList<>();
-            for (int i = 0; i < bindings.size(); i++) rows.add(new Row(i));
-            replaceEntries(rows);
-            setScrollAmount(scroll);
+            // One row per position; each row shows whatever binding currently sits there,
+            // so reordering never rebuilds the list and the scroll position stays put.
+            for (int i = 0; i < bindings.size(); i++) addEntry(new Row(i));
         }
 
         @Override
@@ -162,9 +154,8 @@ public final class PriorityScreen extends Screen {
         }
     }
 
-    private final class Row extends ContainerObjectSelectionList.Entry<Row> {
+    private final class Row extends Compat.Row<Row> {
         private final int index;
-        private final KeyMapping mapping;
         private final Button top;
         private final Button up;
         private final Button down;
@@ -172,34 +163,28 @@ public final class PriorityScreen extends Screen {
 
         Row(int index) {
             this.index = index;
-            this.mapping = bindings.get(index);
-            boolean off = disabled.contains(mapping.getName());
-            top = Button.builder(Component.literal("⤒"), b -> moveToTop(index)).size(18, 20)
+            top = Button.builder(Component.literal("⤒"), b -> move(index, 0)).size(18, 20)
                     .tooltip(Tooltip.create(Component.translatable(LANG + "to_top"))).build();
-            up = Button.builder(Component.literal("▲"), b -> move(index, -1)).size(18, 20).build();
-            down = Button.builder(Component.literal("▼"), b -> move(index, 1)).size(18, 20).build();
-            onOff = Button.builder(Component.translatable(LANG + (off ? "off" : "on"))
-                    .withStyle(off ? ChatFormatting.RED : ChatFormatting.GREEN), b -> toggle(mapping)).size(36, 20).build();
-            top.active = index > 0;
-            up.active = index > 0;
-            down.active = index < bindings.size() - 1;
+            up = Button.builder(Component.literal("▲"), b -> move(index, index - 1)).size(18, 20).build();
+            down = Button.builder(Component.literal("▼"), b -> move(index, index + 1)).size(18, 20).build();
+            onOff = Button.builder(Component.empty(), b -> toggle(index)).size(36, 20).build();
         }
 
         @Override
-        public void render(GuiGraphics graphics, int idx, int top, int left, int rowWidth, int rowHeight,
-                           int mouseX, int mouseY, boolean hovered, float partialTick) {
+        protected void renderRow(GuiGraphics graphics, int left, int rowTop, int rowWidth,
+                                 int mouseX, int mouseY, float partialTick) {
+            KeyMapping mapping = bindings.get(index);
             boolean off = disabled.contains(mapping.getName());
             int winner = exclusive ? topEnabled() : -1;
             boolean suppressed = off || (exclusive && index != winner);
 
-            String rank = (index + 1) + ".";
-            graphics.drawString(font, rank, left, top + 3, 0x808080);
+            graphics.drawString(font, (index + 1) + ".", left, rowTop + 3, GRAY);
             int textLeft = left + 16;
 
             MutableComponent name = Component.translatable(mapping.getName());
             if (index == winner) name = Component.literal("★ ").append(name);
 
-            MutableComponent info = Component.translatable(mapping.getCategory()).copy()
+            MutableComponent info = Compat.categoryLabel(mapping).copy()
                     .append(" · ").append(mapping.getTranslatedKeyMessage());
             String context = contextName(mapping.getKeyConflictContext());
             if (context != null) info.append(" · ").append(Component.translatable(LANG + "context." + context));
@@ -208,15 +193,21 @@ public final class PriorityScreen extends Screen {
             }
             int buttonsLeft = left + rowWidth - 95;
             int maxText = buttonsLeft - textLeft - 4;
-            graphics.drawString(font, font.plainSubstrByWidth(name.getString(), maxText), textLeft, top + 3,
-                    suppressed ? 0x808080 : 0xFFFFFF);
-            graphics.drawString(font, font.plainSubstrByWidth(info.getString(), maxText), textLeft, top + 13, 0x707070);
+            graphics.drawString(font, font.plainSubstrByWidth(name.getString(), maxText), textLeft, rowTop + 3,
+                    suppressed ? GRAY : WHITE);
+            graphics.drawString(font, font.plainSubstrByWidth(info.getString(), maxText), textLeft, rowTop + 13, DARK_GRAY);
 
-            this.top.setPosition(buttonsLeft, top);
-            up.setPosition(buttonsLeft + 19, top);
-            down.setPosition(buttonsLeft + 38, top);
-            onOff.setPosition(buttonsLeft + 58, top);
-            this.top.render(graphics, mouseX, mouseY, partialTick);
+            top.active = index > 0;
+            up.active = index > 0;
+            down.active = index < bindings.size() - 1;
+            onOff.setMessage(Component.translatable(LANG + (off ? "off" : "on"))
+                    .withStyle(off ? ChatFormatting.RED : ChatFormatting.GREEN));
+
+            top.setPosition(buttonsLeft, rowTop);
+            up.setPosition(buttonsLeft + 19, rowTop);
+            down.setPosition(buttonsLeft + 38, rowTop);
+            onOff.setPosition(buttonsLeft + 58, rowTop);
+            top.render(graphics, mouseX, mouseY, partialTick);
             up.render(graphics, mouseX, mouseY, partialTick);
             down.render(graphics, mouseX, mouseY, partialTick);
             onOff.render(graphics, mouseX, mouseY, partialTick);

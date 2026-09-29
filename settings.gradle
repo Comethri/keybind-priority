@@ -10,3 +10,9 @@ plugins {
 }
 
 rootProject.name = 'keybind-priority'
+
+// One subproject per supported Minecraft version: versions/<minecraft>/version.properties
+file('versions').listFiles().findAll { new File(it, 'version.properties').exists() }.sort().each { dir ->
+    include dir.name
+    project(":${dir.name}").projectDir = dir
+}

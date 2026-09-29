@@ -4,7 +4,6 @@ import com.mojang.blaze3d.platform.InputConstants;
 import net.minecraft.client.KeyMapping;
 import net.minecraft.client.Minecraft;
 import net.neoforged.neoforge.client.event.ClientTickEvent;
-import net.neoforged.neoforge.client.settings.KeyConflictContext;
 import net.neoforged.neoforge.common.NeoForge;
 import org.lwjgl.glfw.GLFW;
 
@@ -63,8 +62,8 @@ public final class SelfTest {
 
     private static void runKeyTests() {
         InputConstants.Key key = key();
-        KeyMapping a = new KeyMapping("key.keybind_priority.selftest.a", KeyConflictContext.UNIVERSAL, key, "key.categories.misc");
-        KeyMapping b = new KeyMapping("key.keybind_priority.selftest.b", KeyConflictContext.UNIVERSAL, key, "key.categories.misc");
+        KeyMapping a = Compat.newTestMapping("key.keybind_priority.selftest.a", key);
+        KeyMapping b = Compat.newTestMapping("key.keybind_priority.selftest.b", key);
 
         KeyMapping.click(key);
         expectClicks("no rule", a, 1, b, 1);
@@ -80,7 +79,7 @@ public final class SelfTest {
         KeyMapping.set(key, false);
         check(!a.isDown() && !b.isDown(), "release: nothing should stay down");
 
-        check(b.matches(TEST_KEY, 0) && !a.matches(TEST_KEY, 0), "matches: only the top binding should match");
+        check(Compat.matchesKeysym(b, TEST_KEY) && !Compat.matchesKeysym(a, TEST_KEY), "matches: only the top binding should match");
 
         rule.disabled.add(b.getName());
         KeyMapping.click(key);

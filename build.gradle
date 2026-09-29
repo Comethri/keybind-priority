@@ -1,64 +1,80 @@
 plugins {
-    id 'java-library'
-    id 'net.neoforged.moddev' version '2.0.148'
+    id 'net.neoforged.moddev' version '2.0.148' apply false
 }
 
-version = mod_version
-group = mod_group
+subprojects {
+    // Per-version settings; -P on the command line wins (CI uses it to start older NeoForge builds).
+    def versionProps = new Properties()
+    file('version.properties').withReader('UTF-8') { versionProps.load(it) }
+    versionProps.each { key, value ->
+        if (!project.hasProperty(key)) project.ext.set(key, value)
+    }
 
-base {
-    archivesName = "keybind-priority-neoforge-${minecraft_version}"
-}
+    apply plugin: 'java-library'
+    apply plugin: 'net.neoforged.moddev'
 
-java.toolchain.languageVersion = JavaLanguageVersion.of(21)
+    version = mod_version
+    group = mod_group
 
-neoForge {
-    version = neo_version
+    base {
+        archivesName = "keybind-priority-neoforge-${jar_label}"
+    }
 
-    runs {
-        client {
-            client()
-            gameDirectory = project.file('run')
+    java.toolchain.languageVersion = JavaLanguageVersion.of(21)
+
+    // Shared code plus the compat layer for this Minecraft version (legacy: 1.21-1.21.8, modern: 1.21.9+).
+    sourceSets.main {
+        java.srcDirs = [rootProject.file('src/main/java'), rootProject.file("compat/${compat}/java")]
+        resources.srcDirs = [rootProject.file('src/main/resources')]
+    }
+
+    neoForge {
+        version = neo_version
+
+        runs {
+            client {
+                client()
+                gameDirectory = project.file('run')
+            }
+            // CI: starts the game, runs SelfTest and quits (see .github/workflows/test.yml)
+            selftest {
+                client()
+                gameDirectory = project.file('run-selftest')
+                systemProperty 'keybindpriority.selftest', 'true'
+            }
         }
 
-        // CI: starts the game, runs SelfTest and quits (see .github/workflows/test.yml)
-        selftest {
-            client()
-            gameDirectory = project.file('run-selftest')
-            systemProperty 'keybindpriority.selftest', 'true'
+        mods {
+            "${mod_id}" {
+                sourceSet sourceSets.main
+            }
         }
     }
 
-    mods {
-        "${mod_id}" {
-            sourceSet sourceSets.main
+    tasks.withType(JavaCompile).configureEach {
+        options.encoding = 'UTF-8'
+    }
+
+    processResources {
+        def props = [
+                mod_id                 : mod_id,
+                mod_name               : mod_name,
+                mod_version            : mod_version,
+                mod_authors            : mod_authors,
+                mod_license            : mod_license,
+                minecraft_version_range: minecraft_version_range,
+                neo_version_range      : neo_version_range,
+                loader_version_range   : loader_version_range,
+        ]
+        inputs.properties props
+        filesMatching('META-INF/neoforge.mods.toml') {
+            expand props
         }
     }
-}
 
-tasks.withType(JavaCompile).configureEach {
-    options.encoding = 'UTF-8'
-}
-
-processResources {
-    def props = [
-            mod_id               : mod_id,
-            mod_name             : mod_name,
-            mod_version          : mod_version,
-            mod_authors          : mod_authors,
-            mod_license          : mod_license,
-            minecraft_version_range: minecraft_version_range,
-            neo_version_range    : neo_version_range,
-            loader_version_range : loader_version_range,
-    ]
-    inputs.properties props
-    filesMatching('META-INF/neoforge.mods.toml') {
-        expand props
-    }
-}
-
-jar {
-    from('LICENSE') {
-        rename { "${it}_${mod_id}" }
+    jar {
+        from(rootProject.file('LICENSE')) {
+            rename { "${it}_${mod_id}" }
+        }
     }
 }

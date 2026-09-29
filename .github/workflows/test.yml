@@ -70,7 +70,7 @@ jobs:
         run: ./gradlew $PROJECT:build $NEO
 
       - name: Install virtual display
-        run: sudo apt-get update && sudo apt-get install -y xvfb libgl1-mesa-dri
+        run: sudo apt-get update && sudo apt-get install -y xvfb libgl1-mesa-dri imagemagick
 
       # The early loading window times out on the software-rendered virtual display now and then.
       - name: Turn off the early loading window
@@ -78,9 +78,26 @@ jobs:
           mkdir -p versions/${{ matrix.minecraft }}/run-selftest/config
           echo 'earlyWindowControl = false' > versions/${{ matrix.minecraft }}/run-selftest/config/fml.toml
 
-      - name: Start the game and run the self test
+      - name: Start the game, run the self test and screenshot the menu
         shell: bash
-        run: xvfb-run -a -s "-screen 0 1280x720x24" ./gradlew $PROJECT:runSelftest $NEO 2>&1 | tee selftest.log
+        run: |
+          Xvfb :99 -screen 0 1280x720x24 &
+          export DISPLAY=:99
+          ./gradlew $PROJECT:runSelftest $NEO > selftest.log 2>&1 &
+          game=$!
+          for i in $(seq 1 600); do
+            if grep -q "KEYBIND_PRIORITY_SELFTEST: MENU_OPEN" selftest.log; then
+              sleep 2
+              import -display :99 -window root menu.png && echo "screenshot taken"
+              break
+            fi
+            kill -0 $game 2>/dev/null || break
+            sleep 1
+          done
+          wait $game
+          status=$?
+          cat selftest.log
+          exit $status
 
       - name: Check result
         if: always()
@@ -95,6 +112,7 @@ jobs:
           name: logs-${{ matrix.minecraft }}-${{ matrix.neoforge }}
           path: |
             selftest.log
+            menu.png
             versions/${{ matrix.minecraft }}/run-selftest/logs/
             versions/${{ matrix.minecraft }}/run-selftest/crash-reports/
           if-no-files-found: ignore

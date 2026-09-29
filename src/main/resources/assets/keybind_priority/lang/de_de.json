@@ -11,5 +11,7 @@
   "screen.keybind_priority.state.suppressed": "nur wenn höhere inaktiv sind",
   "screen.keybind_priority.context.universal": "überall",
   "screen.keybind_priority.context.gui": "in Menüs",
-  "screen.keybind_priority.context.custom": "Sonderkontext"
+  "screen.keybind_priority.context.custom": "Sonderkontext",
+  "key.keybind_priority.selftest.a": "Selbsttest-Belegung A",
+  "key.keybind_priority.selftest.b": "Selbsttest-Belegung B"
 }

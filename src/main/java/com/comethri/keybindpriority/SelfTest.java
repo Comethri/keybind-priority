@@ -18,7 +18,9 @@ import java.util.List;
 public final class SelfTest {
     public static final String PROPERTY = "keybindpriority.selftest";
     private static final int TEST_KEY = GLFW.GLFW_KEY_F25;
-    private static final int MENU_TICKS = 20;
+    private static final int MENU_TICKS = 160;
+    /** CI takes a screenshot of the display once this line shows up in the log. */
+    private static final int MENU_READY_TICK = 20;
 
     private static final List<String> failures = new ArrayList<>();
     private static int stage;
@@ -46,7 +48,9 @@ public final class SelfTest {
                 runKeyTests();
                 minecraft.setScreen(new PriorityScreen(key()));
                 stage = 1;
-            } else if (stage == 1 && ++ticks >= MENU_TICKS) {
+            } else if (stage == 1 && ++ticks == MENU_READY_TICK) {
+                KeybindPriority.LOG.info("KEYBIND_PRIORITY_SELFTEST: MENU_OPEN");
+            } else if (stage == 1 && ticks >= MENU_TICKS) {
                 check(minecraft.screen instanceof PriorityScreen, "menu closed by itself");
                 minecraft.setScreen(null);
                 stage = 2;
@@ -90,7 +94,8 @@ public final class SelfTest {
         KeyMapping.click(key);
         expectClicks("all bindings", a, 1, b, 1);
 
-        PriorityConfig.removeRule(key.getName());
+        // Leave a ranked rule behind so the menu screenshot shows a winner and a suppressed binding.
+        rule.exclusive = true;
     }
 
     private static void expectClicks(String what, KeyMapping a, int wantA, KeyMapping b, int wantB) {

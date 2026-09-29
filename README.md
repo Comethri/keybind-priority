@@ -33,13 +33,23 @@ can put the key you use in menus and the key you use in game on the same button 
 Nothing is rebound, nothing is deleted. Remove the mod and every key behaves exactly like before. Your
 rankings live in `config/keybind_priority.json`.
 
-## Requirements
+## Versions
 
-- Minecraft **1.21** or **1.21.1**
-- NeoForge **21.0.143+** or **21.1.x**
-- Client only. Servers don't need it.
+NeoForge, client only. Servers don't need it. Pick the jar for your Minecraft version:
 
-Every push starts the game on the first and last NeoForge build of 1.21 and 1.21.1 and runs an in-game self
+| Minecraft | NeoForge | Jar |
+|---|---|---|
+| 1.21, 1.21.1 | 21.0.143+, 21.1.x | `keybind-priority-neoforge-1.21-1.21.1-…` |
+| 1.21.3 | 21.3.56+ | `keybind-priority-neoforge-1.21.3-…` |
+| 1.21.4 | 21.4.121+ | `keybind-priority-neoforge-1.21.4-…` |
+| 1.21.5 | 21.5.74+ | `keybind-priority-neoforge-1.21.5-…` |
+| 1.21.8 | 21.8.9+ | `keybind-priority-neoforge-1.21.8-…` |
+| 1.21.10 | 21.10.64+ | `keybind-priority-neoforge-1.21.10-…` |
+| 1.21.11 | 21.11.42+ | `keybind-priority-neoforge-1.21.11-…` |
+
+1.21.2, 1.21.6, 1.21.7 and 1.21.9 only ever had beta builds of NeoForge, so there is no jar for them.
+
+Every push starts the game on the first and last NeoForge build of each of these and runs an in-game self
 test: bindings are ranked, keys are pressed and held, and the menu is opened. See the Actions tab.
 
 ## Limits
@@ -52,7 +62,9 @@ test: bindings are ranked, keys are pressed and held, and the menu is opened. Se
 
 ## Building
 
-Java 21: `./gradlew build`, the jar ends up in `build/libs/`.
+Java 21: `./gradlew build` builds every version, the jars end up in `versions/<minecraft>/build/libs/`.
+Shared code lives in `src/`, the differences between Minecraft versions in `compat/legacy` (1.21–1.21.8) and
+`compat/modern` (1.21.9+).
 
 ## License
 

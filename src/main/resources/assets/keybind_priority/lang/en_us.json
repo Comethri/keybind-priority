@@ -1,0 +1,15 @@
+{
+  "screen.keybind_priority.title": "Keybind Priority: %s",
+  "screen.keybind_priority.hint": "Order = priority. Ctrl + Alt + key opens this menu in game.",
+  "screen.keybind_priority.mode.all": "Mode: all bindings",
+  "screen.keybind_priority.mode.exclusive": "Mode: top binding only",
+  "screen.keybind_priority.empty": "Nothing is bound to this key.",
+  "screen.keybind_priority.to_top": "Bring to top",
+  "screen.keybind_priority.on": "On",
+  "screen.keybind_priority.off": "Off",
+  "screen.keybind_priority.state.off": "off",
+  "screen.keybind_priority.state.suppressed": "only if higher ones are inactive",
+  "screen.keybind_priority.context.universal": "everywhere",
+  "screen.keybind_priority.context.gui": "in menus",
+  "screen.keybind_priority.context.custom": "special context"
+}

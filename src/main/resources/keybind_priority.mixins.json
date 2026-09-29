@@ -1,0 +1,14 @@
+{
+  "required": true,
+  "minVersion": "0.8",
+  "package": "com.comethri.keybindpriority.mixin",
+  "compatibilityLevel": "JAVA_21",
+  "client": [
+    "KeyMappingAccessor",
+    "KeyMappingMixin",
+    "KeyboardHandlerMixin"
+  ],
+  "injectors": {
+    "defaultRequire": 1
+  }
+}

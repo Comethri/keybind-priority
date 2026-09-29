@@ -1,0 +1,15 @@
+{
+  "screen.keybind_priority.title": "Keybind Priority: %s",
+  "screen.keybind_priority.hint": "Reihenfolge = Priorität. Strg + Alt + Taste öffnet dieses Menü im Spiel.",
+  "screen.keybind_priority.mode.all": "Modus: alle Belegungen",
+  "screen.keybind_priority.mode.exclusive": "Modus: nur die oberste",
+  "screen.keybind_priority.empty": "Auf dieser Taste liegt nichts.",
+  "screen.keybind_priority.to_top": "Ganz nach oben",
+  "screen.keybind_priority.on": "An",
+  "screen.keybind_priority.off": "Aus",
+  "screen.keybind_priority.state.off": "aus",
+  "screen.keybind_priority.state.suppressed": "nur wenn höhere inaktiv sind",
+  "screen.keybind_priority.context.universal": "überall",
+  "screen.keybind_priority.context.gui": "in Menüs",
+  "screen.keybind_priority.context.custom": "Sonderkontext"
+}

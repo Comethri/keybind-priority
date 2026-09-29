@@ -43,7 +43,9 @@ jobs:
 
       - name: Check result
         if: always()
-        run: grep "KEYBIND_PRIORITY_SELFTEST" selftest.log && grep -q "KEYBIND_PRIORITY_SELFTEST: PASS" selftest.log
+        run: |
+          grep "KEYBIND_PRIORITY_SELFTEST" selftest.log
+          grep -q "KEYBIND_PRIORITY_SELFTEST: PASS" selftest.log
 
       - name: Upload logs
         if: always()

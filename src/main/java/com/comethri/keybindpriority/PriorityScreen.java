@@ -150,7 +150,7 @@ public final class PriorityScreen extends Screen {
 
         @Override
         public int getRowWidth() {
-            return Math.min(340, width - 24);
+            return Math.min(400, width - 24);
         }
     }
 

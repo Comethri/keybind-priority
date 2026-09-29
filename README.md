@@ -35,9 +35,12 @@ rankings live in `config/keybind_priority.json`.
 
 ## Requirements
 
-- Minecraft **1.21.1**
-- NeoForge **21.1.x**
+- Minecraft **1.21** or **1.21.1**
+- NeoForge **21.0.143+** or **21.1.x**
 - Client only. Servers don't need it.
+
+Every push starts the game on the first and last NeoForge build of 1.21 and 1.21.1 and runs an in-game self
+test: bindings are ranked, keys are pressed and held, and the menu is opened. See the Actions tab.
 
 ## Limits
 

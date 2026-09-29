@@ -7,7 +7,7 @@ on:
 
 jobs:
   build:
-    name: Build all versions
+    name: Build
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -19,52 +19,48 @@ jobs:
 
       - uses: gradle/actions/setup-gradle@v4
 
-      - name: Build
+      - name: Build the jar
         run: ./gradlew build
 
-      - name: Upload jars
-        uses: actions/upload-artifact@v4
+      - uses: actions/upload-artifact@v4
         with:
           name: keybind-priority
-          path: versions/*/build/libs/*.jar
+          path: build/libs/*.jar
 
   selftest:
-    name: ${{ matrix.minecraft }} / NeoForge ${{ matrix.neoforge }}
+    name: NeoForge ${{ matrix.neoforge }}
+    needs: build
     runs-on: ubuntu-latest
     timeout-minutes: 30
     strategy:
       fail-fast: false
       matrix:
-        # First and last stable NeoForge build of every line each jar declares support for.
-        # (21.10.63 is left out: NeoForge itself fails to set up on it, so the range starts at 21.10.64.)
-        include:
-          - { minecraft: '1.21.1', neoforge: '21.0.143' }
-          - { minecraft: '1.21.1', neoforge: '21.0.167' }
-          - { minecraft: '1.21.1', neoforge: '21.1.1' }
-          - { minecraft: '1.21.1', neoforge: '21.1.252' }
-          - { minecraft: '1.21.3', neoforge: '21.3.56' }
-          - { minecraft: '1.21.3', neoforge: '21.3.97' }
-          - { minecraft: '1.21.4', neoforge: '21.4.121' }
-          - { minecraft: '1.21.4', neoforge: '21.4.158' }
-          - { minecraft: '1.21.5', neoforge: '21.5.74' }
-          - { minecraft: '1.21.5', neoforge: '21.5.98' }
-          - { minecraft: '1.21.8', neoforge: '21.8.9' }
-          - { minecraft: '1.21.8', neoforge: '21.8.54' }
-          - { minecraft: '1.21.10', neoforge: '21.10.64' }
-          - { minecraft: '1.21.11', neoforge: '21.11.42' }
-          - { minecraft: '1.21.11', neoforge: '21.11.45' }
-          # Minecraft versions NeoForge only released betas for share the jar of their hotfix release.
-          - { minecraft: '1.21.3', neoforge: '21.2.0-beta' }
-          - { minecraft: '1.21.3', neoforge: '21.2.1-beta' }
-          - { minecraft: '1.21.8', neoforge: '21.6.0-beta' }
-          - { minecraft: '1.21.8', neoforge: '21.6.20-beta' }
-          - { minecraft: '1.21.8', neoforge: '21.7.0-beta' }
-          - { minecraft: '1.21.8', neoforge: '21.7.25-beta' }
-          - { minecraft: '1.21.10', neoforge: '21.9.0-beta' }
-          - { minecraft: '1.21.10', neoforge: '21.9.16-beta' }
-    env:
-      PROJECT: ':${{ matrix.minecraft }}'
-      NEO: '-Pneo_version=${{ matrix.neoforge }}'
+        # The one jar, started on the first and last NeoForge build (beta or stable) of every
+        # Minecraft 1.21.x. NeoForge 21.10.63 is left out: it fails to set up by itself.
+        neoforge:
+          - '21.0.143'
+          - '21.0.167'
+          - '21.1.1'
+          - '21.1.252'
+          - '21.2.0-beta'
+          - '21.2.1-beta'
+          - '21.3.56'
+          - '21.3.97'
+          - '21.4.121'
+          - '21.4.158'
+          - '21.5.74'
+          - '21.5.98'
+          - '21.6.0-beta'
+          - '21.6.20-beta'
+          - '21.7.0-beta'
+          - '21.7.25-beta'
+          - '21.8.9'
+          - '21.8.54'
+          - '21.9.0-beta'
+          - '21.9.16-beta'
+          - '21.10.64'
+          - '21.11.42'
+          - '21.11.45'
     steps:
       - uses: actions/checkout@v4
 
@@ -75,8 +71,10 @@ jobs:
 
       - uses: gradle/actions/setup-gradle@v4
 
-      - name: Build
-        run: ./gradlew $PROJECT:build $NEO
+      - uses: actions/download-artifact@v4
+        with:
+          name: keybind-priority
+          path: dist
 
       - name: Install virtual display
         run: sudo apt-get update && sudo apt-get install -y xvfb libgl1-mesa-dri imagemagick
@@ -84,17 +82,18 @@ jobs:
       # The early loading window times out on the software-rendered virtual display now and then.
       - name: Turn off the early loading window
         run: |
-          mkdir -p versions/${{ matrix.minecraft }}/run-selftest/config
-          echo 'earlyWindowControl = false' > versions/${{ matrix.minecraft }}/run-selftest/config/fml.toml
+          mkdir -p testrun/run/config
+          echo 'earlyWindowControl = false' > testrun/run/config/fml.toml
 
-      - name: Start the game, run the self test and screenshot the menu
+      - name: Start the game with the jar, run the self test and screenshot the menu
         shell: bash
         run: |
+          jar=$(ls dist/*.jar)
           Xvfb :99 -screen 0 1280x720x24 &
           export DISPLAY=:99
-          ./gradlew $PROJECT:runSelftest $NEO > selftest.log 2>&1 &
+          ./gradlew :testrun:runSelftest -Ptest_neo_version=${{ matrix.neoforge }} -Pmod_jar=$PWD/$jar > selftest.log 2>&1 &
           game=$!
-          for i in $(seq 1 600); do
+          for i in $(seq 1 900); do
             if grep -q "KEYBIND_PRIORITY_SELFTEST: MENU_OPEN" selftest.log; then
               sleep 2
               import -display :99 -window root menu.png && echo "screenshot taken"
@@ -111,17 +110,17 @@ jobs:
       - name: Check result
         if: always()
         run: |
-          grep "KEYBIND_PRIORITY_SELFTEST" selftest.log
+          grep "Using compat layer\|input mixins\|KEYBIND_PRIORITY_SELFTEST" selftest.log
           grep -q "KEYBIND_PRIORITY_SELFTEST: PASS" selftest.log
 
       - name: Upload logs
         if: always()
         uses: actions/upload-artifact@v4
         with:
-          name: logs-${{ matrix.minecraft }}-${{ matrix.neoforge }}
+          name: logs-${{ matrix.neoforge }}
           path: |
             selftest.log
             menu.png
-            versions/${{ matrix.minecraft }}/run-selftest/logs/
-            versions/${{ matrix.minecraft }}/run-selftest/crash-reports/
+            testrun/run/logs/
+            testrun/run/crash-reports/
           if-no-files-found: ignore

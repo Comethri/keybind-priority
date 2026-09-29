@@ -1,80 +1,102 @@
 plugins {
-    id 'net.neoforged.moddev' version '2.0.148' apply false
+    id 'java-library'
+    id 'net.neoforged.moddev' version '2.0.148'
 }
 
-subprojects {
-    // Per-version settings; -P on the command line wins (CI uses it to start older NeoForge builds).
-    def versionProps = new Properties()
-    file('version.properties').withReader('UTF-8') { versionProps.load(it) }
-    versionProps.each { key, value ->
-        if (!project.hasProperty(key)) project.ext.set(key, value)
-    }
+version = mod_version
+group = mod_group
 
-    apply plugin: 'java-library'
+base {
+    archivesName = 'keybind-priority-neoforge'
+}
+
+java.toolchain.languageVersion = JavaLanguageVersion.of(21)
+
+neoForge {
+    version = neo_version
+
+    mods {
+        "${mod_id}" {
+            sourceSet sourceSets.main
+        }
+    }
+}
+
+tasks.withType(JavaCompile).configureEach {
+    options.encoding = 'UTF-8'
+}
+
+processResources {
+    def props = [
+            mod_id                 : mod_id,
+            mod_name               : mod_name,
+            mod_version            : mod_version,
+            mod_authors            : mod_authors,
+            mod_license            : mod_license,
+            minecraft_version_range: minecraft_version_range,
+            neo_version_range      : neo_version_range,
+            loader_version_range   : loader_version_range,
+    ]
+    inputs.properties props
+    filesMatching('META-INF/neoforge.mods.toml') {
+        expand props
+    }
+}
+
+// Compat parts: compiled against their own Minecraft version, on top of the main classes.
+def compatParts = [
+        'compat-1.21.6': '21.8.54',   // 1.21.6 - 1.21.8
+        'compat-1.21.9': '21.11.45',  // 1.21.9 - 1.21.11
+]
+compatParts.each { name, neo ->
+    project(":${name}") {
+        apply plugin: 'java-library'
+        apply plugin: 'net.neoforged.moddev'
+        java.toolchain.languageVersion = JavaLanguageVersion.of(21)
+        neoForge {
+            version = neo
+        }
+        dependencies {
+            compileOnly rootProject.sourceSets.main.output
+        }
+        tasks.withType(JavaCompile).configureEach {
+            options.encoding = 'UTF-8'
+        }
+    }
+}
+
+jar {
+    compatParts.keySet().each { name ->
+        from(project(":${name}").sourceSets.main.output)
+    }
+    from('LICENSE') {
+        rename { "${it}_${mod_id}" }
+    }
+}
+
+// Runs the finished jar (not the sources) in a dev client, so CI tests exactly what gets published.
+project(':testrun') {
+    apply plugin: 'java'
     apply plugin: 'net.neoforged.moddev'
-
-    version = mod_version
-    group = mod_group
-
-    base {
-        archivesName = "keybind-priority-neoforge-${jar_label}"
-    }
-
     java.toolchain.languageVersion = JavaLanguageVersion.of(21)
 
-    // Shared code plus the compat layer for this Minecraft version (legacy: 1.21-1.21.8, modern: 1.21.9+).
-    sourceSets.main {
-        java.srcDirs = [rootProject.file('src/main/java'), rootProject.file("compat/${compat}/java")]
-        resources.srcDirs = [rootProject.file('src/main/resources')]
-    }
-
     neoForge {
-        version = neo_version
-
+        version = project.findProperty('test_neo_version') ?: rootProject.neo_version
         runs {
-            client {
-                client()
-                gameDirectory = project.file('run')
-            }
-            // CI: starts the game, runs SelfTest and quits (see .github/workflows/test.yml)
             selftest {
                 client()
-                gameDirectory = project.file('run-selftest')
+                gameDirectory = project.file('run')
                 systemProperty 'keybindpriority.selftest', 'true'
             }
         }
-
-        mods {
-            "${mod_id}" {
-                sourceSet sourceSets.main
-            }
-        }
     }
 
-    tasks.withType(JavaCompile).configureEach {
-        options.encoding = 'UTF-8'
+    // -Pmod_jar=<path> tests an existing jar (CI), otherwise the one built from these sources.
+    def installJar = tasks.register('installModJar', Copy) {
+        from(project.findProperty('mod_jar') ?: rootProject.tasks.named('jar'))
+        into project.file('run/mods')
     }
-
-    processResources {
-        def props = [
-                mod_id                 : mod_id,
-                mod_name               : mod_name,
-                mod_version            : mod_version,
-                mod_authors            : mod_authors,
-                mod_license            : mod_license,
-                minecraft_version_range: minecraft_version_range,
-                neo_version_range      : neo_version_range,
-                loader_version_range   : loader_version_range,
-        ]
-        inputs.properties props
-        filesMatching('META-INF/neoforge.mods.toml') {
-            expand props
-        }
-    }
-
-    jar {
-        from(rootProject.file('LICENSE')) {
-            rename { "${it}_${mod_id}" }
-        }
+    tasks.matching { it.name == 'runSelftest' }.configureEach {
+        dependsOn installJar
     }
 }

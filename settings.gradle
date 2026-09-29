@@ -11,8 +11,11 @@ plugins {
 
 rootProject.name = 'keybind-priority'
 
-// One subproject per supported Minecraft version: versions/<minecraft>/version.properties
-file('versions').listFiles().findAll { new File(it, 'version.properties').exists() }.sort().each { dir ->
-    include dir.name
-    project(":${dir.name}").projectDir = dir
-}
+// Compat parts, each compiled against the Minecraft version it is for, packed into the one jar.
+include 'compat-1.21.6'
+project(':compat-1.21.6').projectDir = file('compat/v1_21_6')
+include 'compat-1.21.9'
+project(':compat-1.21.9').projectDir = file('compat/v1_21_9')
+
+// Starts the finished jar on any NeoForge version: ./gradlew :testrun:runSelftest -Ptest_neo_version=...
+include 'testrun'

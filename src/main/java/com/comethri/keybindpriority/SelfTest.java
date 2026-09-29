@@ -66,8 +66,8 @@ public final class SelfTest {
 
     private static void runKeyTests() {
         InputConstants.Key key = key();
-        KeyMapping a = Compat.newTestMapping("key.keybind_priority.selftest.a", key);
-        KeyMapping b = Compat.newTestMapping("key.keybind_priority.selftest.b", key);
+        KeyMapping a = Compat.get().newTestMapping("key.keybind_priority.selftest.a", key);
+        KeyMapping b = Compat.get().newTestMapping("key.keybind_priority.selftest.b", key);
 
         KeyMapping.click(key);
         expectClicks("no rule", a, 1, b, 1);
@@ -83,7 +83,7 @@ public final class SelfTest {
         KeyMapping.set(key, false);
         check(!a.isDown() && !b.isDown(), "release: nothing should stay down");
 
-        check(Compat.matchesKeysym(b, TEST_KEY) && !Compat.matchesKeysym(a, TEST_KEY), "matches: only the top binding should match");
+        check(Compat.get().matchesKeysym(b, TEST_KEY) && !Compat.get().matchesKeysym(a, TEST_KEY), "matches: only the top binding should match");
 
         rule.disabled.add(b.getName());
         KeyMapping.click(key);

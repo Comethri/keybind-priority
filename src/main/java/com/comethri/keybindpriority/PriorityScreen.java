@@ -140,12 +140,14 @@ public final class PriorityScreen extends Screen {
         return "custom";
     }
 
-    private final class BindingList extends ContainerObjectSelectionList<Row> {
+    // Raw type: the entry class comes from the compat layer of the running Minecraft version.
+    @SuppressWarnings({"rawtypes", "unchecked"})
+    private final class BindingList extends ContainerObjectSelectionList {
         BindingList(Minecraft minecraft, int width, int height, int top) {
             super(minecraft, width, height, top, ROW_HEIGHT);
             // One row per position; each row shows whatever binding currently sits there,
             // so reordering never rebuilds the list and the scroll position stays put.
-            for (int i = 0; i < bindings.size(); i++) addEntry(new Row(i));
+            for (int i = 0; i < bindings.size(); i++) addEntry(Compat.get().newRow(new Row(i)));
         }
 
         @Override
@@ -154,7 +156,7 @@ public final class PriorityScreen extends Screen {
         }
     }
 
-    private final class Row extends Compat.Row<Row> {
+    private final class Row implements RowContent {
         private final int index;
         private final Button top;
         private final Button up;
@@ -171,20 +173,20 @@ public final class PriorityScreen extends Screen {
         }
 
         @Override
-        protected void renderRow(GuiGraphics graphics, int left, int rowTop, int rowWidth,
-                                 int mouseX, int mouseY, float partialTick) {
+        public void render(GuiGraphics graphics, int left, int rowTop, int rowWidth,
+                           int mouseX, int mouseY, float partialTick) {
             KeyMapping mapping = bindings.get(index);
             boolean off = disabled.contains(mapping.getName());
             int winner = exclusive ? topEnabled() : -1;
             boolean suppressed = off || (exclusive && index != winner);
 
-            graphics.drawString(font, (index + 1) + ".", left, rowTop + 3, GRAY);
+            Compat.get().drawText(graphics, font, (index + 1) + ".", left, rowTop + 3, GRAY);
             int textLeft = left + 16;
 
             MutableComponent name = Component.translatable(mapping.getName());
             if (index == winner) name = Component.literal("★ ").append(name);
 
-            MutableComponent info = Compat.categoryLabel(mapping).copy()
+            MutableComponent info = Compat.get().categoryLabel(mapping).copy()
                     .append(" · ").append(mapping.getTranslatedKeyMessage());
             String context = contextName(mapping.getKeyConflictContext());
             if (context != null) info.append(" · ").append(Component.translatable(LANG + "context." + context));
@@ -193,9 +195,9 @@ public final class PriorityScreen extends Screen {
             }
             int buttonsLeft = left + rowWidth - 95;
             int maxText = buttonsLeft - textLeft - 4;
-            graphics.drawString(font, font.plainSubstrByWidth(name.getString(), maxText), textLeft, rowTop + 3,
+            Compat.get().drawText(graphics, font, font.plainSubstrByWidth(name.getString(), maxText), textLeft, rowTop + 3,
                     suppressed ? GRAY : WHITE);
-            graphics.drawString(font, font.plainSubstrByWidth(info.getString(), maxText), textLeft, rowTop + 13, DARK_GRAY);
+            Compat.get().drawText(graphics, font, font.plainSubstrByWidth(info.getString(), maxText), textLeft, rowTop + 13, DARK_GRAY);
 
             top.active = index > 0;
             up.active = index > 0;

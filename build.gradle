@@ -20,6 +20,13 @@ neoForge {
             client()
             gameDirectory = project.file('run')
         }
+
+        // CI: starts the game, runs SelfTest and quits (see .github/workflows/test.yml)
+        selftest {
+            client()
+            gameDirectory = project.file('run-selftest')
+            systemProperty 'keybindpriority.selftest', 'true'
+        }
     }
 
     mods {

@@ -1,0 +1,64 @@
+name: Build and test
+
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+
+jobs:
+  test:
+    name: NeoForge ${{ matrix.neoforge }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    strategy:
+      fail-fast: false
+      matrix:
+        # First and last NeoForge build of Minecraft 1.21 and 1.21.1.
+        neoforge: ['21.0.143', '21.0.167', '21.1.1', '21.1.252']
+    env:
+      # The CI checks the code on each version, not the version ranges in neoforge.mods.toml.
+      GRADLE_ARGS: >-
+        -Pneo_version=${{ matrix.neoforge }}
+        -Pminecraft_version_range=[1.21,1.21.1]
+        -Pneo_version_range=[21.0,21.2)
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      - name: Build
+        run: ./gradlew build $GRADLE_ARGS
+
+      - name: Install virtual display
+        run: sudo apt-get update && sudo apt-get install -y xvfb libgl1-mesa-dri
+
+      - name: Start the game and run the self test
+        shell: bash
+        run: xvfb-run -a -s "-screen 0 1280x720x24" ./gradlew runSelftest $GRADLE_ARGS 2>&1 | tee selftest.log
+
+      - name: Check result
+        if: always()
+        run: grep "KEYBIND_PRIORITY_SELFTEST" selftest.log && grep -q "KEYBIND_PRIORITY_SELFTEST: PASS" selftest.log
+
+      - name: Upload logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: logs-${{ matrix.neoforge }}
+          path: |
+            selftest.log
+            run-selftest/logs/
+            run-selftest/crash-reports/
+          if-no-files-found: ignore
+
+      - name: Upload jar
+        if: matrix.neoforge == '21.1.252'
+        uses: actions/upload-artifact@v4
+        with:
+          name: keybind-priority
+          path: build/libs/*.jar

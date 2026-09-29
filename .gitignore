@@ -7,3 +7,4 @@ bin/
 *.iml
 .vscode/
 *.log
+run-selftest/

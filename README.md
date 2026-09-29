@@ -40,16 +40,14 @@ NeoForge, client only. Servers don't need it. Pick the jar for your Minecraft ve
 | Minecraft | NeoForge | Jar |
 |---|---|---|
 | 1.21, 1.21.1 | 21.0.143+, 21.1.x | `keybind-priority-neoforge-1.21-1.21.1-…` |
-| 1.21.3 | 21.3.56+ | `keybind-priority-neoforge-1.21.3-…` |
+| 1.21.2, 1.21.3 | 21.2 beta, 21.3.56+ | `keybind-priority-neoforge-1.21.2-1.21.3-…` |
 | 1.21.4 | 21.4.121+ | `keybind-priority-neoforge-1.21.4-…` |
 | 1.21.5 | 21.5.74+ | `keybind-priority-neoforge-1.21.5-…` |
-| 1.21.8 | 21.8.9+ | `keybind-priority-neoforge-1.21.8-…` |
-| 1.21.10 | 21.10.64+ | `keybind-priority-neoforge-1.21.10-…` |
+| 1.21.6, 1.21.7, 1.21.8 | 21.6 beta, 21.7 beta, 21.8.9+ | `keybind-priority-neoforge-1.21.6-1.21.8-…` |
+| 1.21.9, 1.21.10 | 21.9 beta, 21.10.64+ | `keybind-priority-neoforge-1.21.9-1.21.10-…` |
 | 1.21.11 | 21.11.42+ | `keybind-priority-neoforge-1.21.11-…` |
 
-1.21.2, 1.21.6, 1.21.7 and 1.21.9 only ever had beta builds of NeoForge, so there is no jar for them.
-
-Every push starts the game on the first and last NeoForge build of each of these and runs an in-game self
+Every push starts the game on the first and last NeoForge build (beta or stable) of each of these and runs an in-game self
 test: bindings are ranked, keys are pressed and held, and the menu is opened. See the Actions tab.
 
 ## Limits

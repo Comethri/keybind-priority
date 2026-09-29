@@ -53,18 +53,18 @@ jobs:
           - { minecraft: '1.21.10', neoforge: '21.10.64' }
           - { minecraft: '1.21.11', neoforge: '21.11.42' }
           - { minecraft: '1.21.11', neoforge: '21.11.45' }
-          # Trial: Minecraft versions NeoForge only released betas for, run with the neighbouring jar.
-          - { minecraft: '1.21.3', neoforge: '21.2.0-beta', extra: '-Pminecraft_version_range=[1.21.2,1.21.3] -Pneo_version_range=[21.2.0-beta,21.4)' }
-          - { minecraft: '1.21.3', neoforge: '21.2.1-beta', extra: '-Pminecraft_version_range=[1.21.2,1.21.3] -Pneo_version_range=[21.2.0-beta,21.4)' }
-          - { minecraft: '1.21.8', neoforge: '21.6.0-beta', extra: '-Pminecraft_version_range=[1.21.6,1.21.8] -Pneo_version_range=[21.6.0-beta,21.9)' }
-          - { minecraft: '1.21.8', neoforge: '21.6.20-beta', extra: '-Pminecraft_version_range=[1.21.6,1.21.8] -Pneo_version_range=[21.6.0-beta,21.9)' }
-          - { minecraft: '1.21.8', neoforge: '21.7.0-beta', extra: '-Pminecraft_version_range=[1.21.6,1.21.8] -Pneo_version_range=[21.6.0-beta,21.9)' }
-          - { minecraft: '1.21.8', neoforge: '21.7.25-beta', extra: '-Pminecraft_version_range=[1.21.6,1.21.8] -Pneo_version_range=[21.6.0-beta,21.9)' }
-          - { minecraft: '1.21.10', neoforge: '21.9.0-beta', extra: '-Pminecraft_version_range=[1.21.9,1.21.10] -Pneo_version_range=[21.9.0-beta,21.11)' }
-          - { minecraft: '1.21.10', neoforge: '21.9.16-beta', extra: '-Pminecraft_version_range=[1.21.9,1.21.10] -Pneo_version_range=[21.9.0-beta,21.11)' }
+          # Minecraft versions NeoForge only released betas for share the jar of their hotfix release.
+          - { minecraft: '1.21.3', neoforge: '21.2.0-beta' }
+          - { minecraft: '1.21.3', neoforge: '21.2.1-beta' }
+          - { minecraft: '1.21.8', neoforge: '21.6.0-beta' }
+          - { minecraft: '1.21.8', neoforge: '21.6.20-beta' }
+          - { minecraft: '1.21.8', neoforge: '21.7.0-beta' }
+          - { minecraft: '1.21.8', neoforge: '21.7.25-beta' }
+          - { minecraft: '1.21.10', neoforge: '21.9.0-beta' }
+          - { minecraft: '1.21.10', neoforge: '21.9.16-beta' }
     env:
       PROJECT: ':${{ matrix.minecraft }}'
-      NEO: '-Pneo_version=${{ matrix.neoforge }} ${{ matrix.extra }}'
+      NEO: '-Pneo_version=${{ matrix.neoforge }}'
     steps:
       - uses: actions/checkout@v4
 

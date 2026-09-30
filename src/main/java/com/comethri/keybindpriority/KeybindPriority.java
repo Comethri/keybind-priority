@@ -12,6 +12,6 @@ public final class KeybindPriority {
 
     public KeybindPriority() {
         PriorityConfig.load();
-        SelfTest.registerIfEnabled();
+        if (Boolean.getBoolean(SelfTest.PROPERTY)) SelfTest.register();
     }
 }

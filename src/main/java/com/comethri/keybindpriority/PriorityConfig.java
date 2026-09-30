@@ -9,6 +9,7 @@ import java.io.IOException;
 import java.io.Reader;
 import java.io.Writer;
 import java.nio.charset.StandardCharsets;
+import java.nio.file.AtomicMoveNotSupportedException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.StandardCopyOption;
@@ -25,6 +26,7 @@ import java.util.TreeMap;
  * {@code KeyMapping#getName()} (e.g. {@code key.ftbultimine}), so both survive restarts and mod updates.
  */
 public final class PriorityConfig {
+    private static final int CURRENT_VERSION = 1;
     private static final Gson GSON = new GsonBuilder().setPrettyPrinting().disableHtmlEscaping().create();
 
     public static final class KeyRule {
@@ -42,11 +44,12 @@ public final class PriorityConfig {
     }
 
     private static final class Data {
-        int version = 1;
+        int version = CURRENT_VERSION;
         Map<String, KeyRule> keys = new TreeMap<>();
     }
 
     private static Data data = new Data();
+    private static boolean saveAllowed = true;
 
     private PriorityConfig() {
     }
@@ -78,22 +81,56 @@ public final class PriorityConfig {
             loaded.keys.values().removeIf(r -> r == null);
             loaded.keys.values().forEach(KeyRule::sanitize);
             data = loaded;
+            if (loaded.version > CURRENT_VERSION) {
+                saveAllowed = false;
+                KeybindPriority.LOG.warn("Config {} uses newer version {}; rules will work where compatible, but this version of the mod will not overwrite it",
+                        file, loaded.version);
+            }
         } catch (IOException | JsonParseException e) {
-            KeybindPriority.LOG.error("Could not read {}, starting with no rules", file, e);
+            Path backup = brokenBackup(file);
+            try {
+                Files.copy(file, backup);
+                KeybindPriority.LOG.error("Could not read {}; preserved it as {} and started with no rules",
+                        file, backup, e);
+            } catch (IOException backupError) {
+                e.addSuppressed(backupError);
+                KeybindPriority.LOG.error("Could not read {} or preserve a backup; leaving it untouched and starting with no rules",
+                        file, e);
+            }
+            data = new Data();
         }
     }
 
     public static void save() {
         Path file = file();
+        if (!saveAllowed) {
+            KeybindPriority.LOG.warn("Not saving {} because it belongs to a newer version of the mod", file);
+            return;
+        }
         Path tmp = file.resolveSibling(file.getFileName() + ".tmp");
         try {
             Files.createDirectories(file.getParent());
             try (Writer writer = Files.newBufferedWriter(tmp, StandardCharsets.UTF_8)) {
                 GSON.toJson(data, writer);
             }
-            Files.move(tmp, file, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);
+            try {
+                Files.move(tmp, file, StandardCopyOption.REPLACE_EXISTING, StandardCopyOption.ATOMIC_MOVE);
+            } catch (AtomicMoveNotSupportedException e) {
+                Files.move(tmp, file, StandardCopyOption.REPLACE_EXISTING);
+            }
         } catch (IOException e) {
             KeybindPriority.LOG.error("Could not write {}", file, e);
+        } finally {
+            try {
+                Files.deleteIfExists(tmp);
+            } catch (IOException e) {
+                KeybindPriority.LOG.warn("Could not remove temporary config file {}", tmp, e);
+            }
         }
+    }
+
+    private static Path brokenBackup(Path file) {
+        String name = file.getFileName() + ".broken-" + System.currentTimeMillis();
+        return file.resolveSibling(name);
     }
 }

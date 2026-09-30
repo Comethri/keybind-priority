@@ -7,3 +7,5 @@ bin/
 *.iml
 .vscode/
 *.log
+__pycache__/
+*.py[cod]

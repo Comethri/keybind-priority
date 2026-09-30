@@ -15,10 +15,26 @@ public final class KeyFilter {
     /** Drops every suppressed binding from what NeoForge found for a key press. */
     public static List<KeyMapping> filter(List<KeyMapping> found) {
         if (found.isEmpty()) return found;
+
+        KeyMapping sameKey = null;
+        for (KeyMapping mapping : found) {
+            if (mapping != null) {
+                sameKey = mapping;
+                break;
+            }
+        }
+        if (sameKey == null) return found;
+
+        PriorityConfig.KeyRule rule = PriorityConfig.rule(sameKey.getKey().getName());
+        if (rule == null) return found;
+        KeyMapping winner = rule.exclusive ? winner(rule, sameKey) : null;
+
         List<KeyMapping> out = null;
         for (int i = 0; i < found.size(); i++) {
             KeyMapping mapping = found.get(i);
-            if (mapping != null && isSuppressed(mapping)) {
+            boolean suppressed = mapping != null && (rule.disabled.contains(mapping.getName())
+                    || (rule.exclusive && winner != null && winner != mapping));
+            if (suppressed) {
                 if (out == null) out = new ArrayList<>(found.subList(0, i));
             } else if (out != null) {
                 out.add(mapping);

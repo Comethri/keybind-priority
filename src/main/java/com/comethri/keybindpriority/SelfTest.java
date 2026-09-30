@@ -29,8 +29,7 @@ public final class SelfTest {
     private SelfTest() {
     }
 
-    public static void registerIfEnabled() {
-        if (!Boolean.getBoolean(PROPERTY)) return;
+    public static void register() {
         KeybindPriority.LOG.info("Self test enabled");
         NeoForge.EVENT_BUS.addListener(SelfTest::onTick);
     }

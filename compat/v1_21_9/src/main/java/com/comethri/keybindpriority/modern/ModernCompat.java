@@ -1,6 +1,8 @@
 package com.comethri.keybindpriority.modern;
 
 import com.comethri.keybindpriority.Compat;
+import com.comethri.keybindpriority.Platform;
+import com.comethri.keybindpriority.legacy.LegacyItemSelectors;
 import com.comethri.keybindpriority.RowContent;
 import com.mojang.blaze3d.platform.InputConstants;
 import net.minecraft.client.KeyMapping;
@@ -11,12 +13,33 @@ import net.minecraft.client.gui.components.events.GuiEventListener;
 import net.minecraft.client.gui.narration.NarratableEntry;
 import net.minecraft.client.input.KeyEvent;
 import net.minecraft.network.chat.Component;
+import net.minecraft.world.item.ItemStack;
 import net.neoforged.neoforge.client.settings.KeyConflictContext;
 
 import java.util.List;
 
 /** Minecraft 1.21.9+ (built against 1.21.11): categories are records, keys arrive as KeyEvent. */
 public class ModernCompat implements Compat {
+    @Override
+    public List<String> itemSelectors() {
+        return Platform.RENAMED_IDENTIFIERS ? ModernItemSelectors.selectors() : LegacyItemSelectors.selectors();
+    }
+
+    @Override
+    public boolean validItemSelector(String selector) {
+        return Platform.RENAMED_IDENTIFIERS ? ModernItemSelectors.valid(selector) : LegacyItemSelectors.valid(selector);
+    }
+
+    @Override
+    public boolean matchesItemSelector(ItemStack stack, String selector) {
+        return Platform.RENAMED_IDENTIFIERS ? ModernItemSelectors.matches(stack, selector) : LegacyItemSelectors.matches(stack, selector);
+    }
+
+    @Override
+    public String itemId(ItemStack stack) {
+        return Platform.RENAMED_IDENTIFIERS ? ModernItemSelectors.itemId(stack) : LegacyItemSelectors.itemId(stack);
+    }
+
     @Override
     public Component categoryLabel(KeyMapping mapping) {
         return mapping.getCategory().label();

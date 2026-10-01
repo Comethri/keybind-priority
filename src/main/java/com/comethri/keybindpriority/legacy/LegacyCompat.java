@@ -10,12 +10,33 @@ import net.minecraft.client.gui.components.ContainerObjectSelectionList;
 import net.minecraft.client.gui.components.events.GuiEventListener;
 import net.minecraft.client.gui.narration.NarratableEntry;
 import net.minecraft.network.chat.Component;
+import net.minecraft.world.item.ItemStack;
 import net.neoforged.neoforge.client.settings.KeyConflictContext;
 
 import java.util.List;
 
 /** Minecraft 1.21 - 1.21.5 (built against 1.21.1): categories are translation keys, keys arrive as ints. */
 public class LegacyCompat implements Compat {
+    @Override
+    public List<String> itemSelectors() {
+        return LegacyItemSelectors.selectors();
+    }
+
+    @Override
+    public boolean validItemSelector(String selector) {
+        return LegacyItemSelectors.valid(selector);
+    }
+
+    @Override
+    public boolean matchesItemSelector(ItemStack stack, String selector) {
+        return LegacyItemSelectors.matches(stack, selector);
+    }
+
+    @Override
+    public String itemId(ItemStack stack) {
+        return LegacyItemSelectors.itemId(stack);
+    }
+
     @Override
     public Component categoryLabel(KeyMapping mapping) {
         return Component.translatable(mapping.getCategory());

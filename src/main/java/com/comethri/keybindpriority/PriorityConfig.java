@@ -26,7 +26,7 @@ import java.util.TreeMap;
  * {@code KeyMapping#getName()} (e.g. {@code key.ftbultimine}), so both survive restarts and mod updates.
  */
 public final class PriorityConfig {
-    private static final int CURRENT_VERSION = 1;
+    private static final int CURRENT_VERSION = 3;
     private static final Gson GSON = new GsonBuilder().setPrettyPrinting().disableHtmlEscaping().create();
 
     public static final class KeyRule {
@@ -36,15 +36,21 @@ public final class PriorityConfig {
         public List<String> order = new ArrayList<>();
         /** Bindings that never react to this key. */
         public Set<String> disabled = new LinkedHashSet<>();
+        public Map<String, ItemCondition> items = new TreeMap<>();
 
         void sanitize() {
             if (order == null) order = new ArrayList<>();
             if (disabled == null) disabled = new LinkedHashSet<>();
+            if (items == null) items = new TreeMap<>();
+            items.values().removeIf(condition -> condition == null);
+            items.values().forEach(ItemCondition::sanitize);
         }
     }
 
     private static final class Data {
         int version = CURRENT_VERSION;
+        /** The short guide opens by itself until it has been closed once. */
+        boolean guideSeen;
         Map<String, KeyRule> keys = new TreeMap<>();
     }
 
@@ -66,6 +72,14 @@ public final class PriorityConfig {
         data.keys.remove(keyName);
     }
 
+    public static boolean guideSeen() {
+        return data.guideSeen;
+    }
+
+    public static void setGuideSeen(boolean seen) {
+        data.guideSeen = seen;
+    }
+
     private static Path file() {
         return FMLPaths.CONFIGDIR.get().resolve(KeybindPriority.MOD_ID + ".json");
     }
@@ -81,6 +95,7 @@ public final class PriorityConfig {
             loaded.keys.values().removeIf(r -> r == null);
             loaded.keys.values().forEach(KeyRule::sanitize);
             data = loaded;
+            if (loaded.version <= CURRENT_VERSION) loaded.version = CURRENT_VERSION;
             if (loaded.version > CURRENT_VERSION) {
                 saveAllowed = false;
                 KeybindPriority.LOG.warn("Config {} uses newer version {}; rules will work where compatible, but this version of the mod will not overwrite it",

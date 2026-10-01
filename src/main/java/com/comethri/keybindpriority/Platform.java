@@ -9,6 +9,7 @@ import java.lang.reflect.Method;
 public final class Platform {
     /** 1.21.9 reworked keyboard input around KeyEvent. */
     public static final boolean MODERN_INPUT = classExists("net/minecraft/client/input/KeyEvent.class");
+    public static final boolean RENAMED_IDENTIFIERS = classExists("net/minecraft/resources/Identifier.class");
 
     private Platform() {
     }

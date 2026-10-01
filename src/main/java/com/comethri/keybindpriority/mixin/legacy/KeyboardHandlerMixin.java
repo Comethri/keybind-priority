@@ -24,7 +24,7 @@ public abstract class KeyboardHandlerMixin {
     private void keybindPriority$openMenu(long window, int key, int scanCode, int action, int modifiers, CallbackInfo ci) {
         if (action != GLFW.GLFW_PRESS || window != minecraft.getWindow().getWindow()) return;
         // Only in game: inside screens Ctrl + Alt is AltGr on many layouts (e.g. "@" in chat).
-        if (minecraft.screen != null || !Screen.hasControlDown() || !Screen.hasAltDown()) return;
+        if (minecraft.player == null || minecraft.screen != null || !Screen.hasControlDown() || !Screen.hasAltDown()) return;
         if (key >= GLFW.GLFW_KEY_LEFT_SHIFT && key <= GLFW.GLFW_KEY_RIGHT_SUPER) return;
         InputConstants.Key pressed = InputConstants.getKey(key, scanCode);
         if (pressed == InputConstants.UNKNOWN) return;

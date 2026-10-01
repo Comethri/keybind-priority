@@ -6,6 +6,8 @@ import net.minecraft.client.gui.Font;
 import net.minecraft.client.gui.GuiGraphics;
 import net.minecraft.client.gui.components.ContainerObjectSelectionList;
 import net.minecraft.network.chat.Component;
+import net.minecraft.world.item.ItemStack;
+import java.util.List;
 
 /**
  * Everything that differs between Minecraft 1.21.x versions. One jar carries three implementations, each
@@ -19,6 +21,14 @@ import net.minecraft.network.chat.Component;
  * ({@code tools/check_linkage.py} checks that).
  */
 public interface Compat {
+    boolean validItemSelector(String selector);
+
+    boolean matchesItemSelector(ItemStack stack, String selector);
+
+    String itemId(ItemStack stack);
+
+    List<String> itemSelectors();
+
     Component categoryLabel(KeyMapping mapping);
 
     KeyMapping newTestMapping(String name, InputConstants.Key key);

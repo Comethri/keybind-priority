@@ -21,6 +21,11 @@ import java.util.List;
  */
 @Mixin(KeyMapping.class)
 public abstract class KeyMappingMixin {
+    @ModifyReturnValue(method = {"isDown", "consumeClick"}, at = @At("RETURN"))
+    private boolean keybindPriority$filterState(boolean active) {
+        return active && !KeyFilter.isSuppressed((KeyMapping) (Object) this);
+    }
+
     @WrapOperation(method = "click", at = @At(value = "INVOKE",
             target = "Lnet/neoforged/neoforge/client/settings/KeyMappingLookup;getAll(Lcom/mojang/blaze3d/platform/InputConstants$Key;)Ljava/util/List;"))
     private static List<KeyMapping> keybindPriority$filterClick(KeyMappingLookup lookup, InputConstants.Key key,

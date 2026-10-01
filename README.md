@@ -28,12 +28,53 @@ mines again, and voice chat keeps its binding but stops answering to V.
 - **On / Off** silences one binding on this key without unbinding it.
 - **Mode** switches between "all bindings" (the normal NeoForge behaviour) and "top binding only".
 
-It's smart about context. A binding that only works in menus never blocks one that works in the world, and
-the other way round. If the top binding can't do anything right now, the next one down takes over. So you
-can put the key you use in menus and the key you use in game on the same button and both keep working.
+Each row shows its state at a glance: **active**, **backup** (waits behind a higher binding), **off**,
+**needs item** or **preferred** (an item condition moved it up). The first time you open the menu, a short
+five-page guide explains all of this; the **?** button brings it back.
+
+Priority rules only apply while a world is loaded and no screen or overlay is open. Inventories, chat,
+other menus and the title screen keep their normal keybind behaviour, including bindings marked Off.
+During gameplay, a binding with an inactive context or modifier is skipped and the next one takes over.
 
 Nothing is rebound, nothing is deleted. Remove the mod and every key behaves exactly like before. Your
 rankings live in `config/keybind_priority.json`.
+
+### Held-item conditions
+
+Each binding has an **Item** button. Enter an item ID such as `minecraft:diamond_pickaxe`,
+or an item tag such as `#minecraft:pickaxes` to match every pickaxe, including modded items in that tag.
+**Use held item** copies the item from the selected hand. Conditions can check the main hand, off hand,
+or either hand.
+
+- **Only with this item** enables the binding only while the selected item is held. Otherwise the next
+  eligible binding can take over.
+- **Prefer with this item** moves the binding ahead of the normal order while the item matches. Without
+  it, the normal order applies. Preference takes effect in **top binding only** mode; **all bindings**
+  mode still allows all eligible bindings.
+
+When multiple preferred conditions match, the list order breaks the tie. Disabled bindings stay disabled.
+For example, put voice chat above Ultimine, select **top binding only**, and give Ultimine a
+**Prefer with this item** condition for `#minecraft:pickaxes`. Holding a pickaxe then gives Ultimine
+priority; switching to another item restores the normal order. Tags use the current world's item tags.
+Escape or Cancel discards editor changes. Existing configs keep their rankings and gain no conditions
+until you add them.
+
+Filters also support `@modid` (item registry namespace), `*` wildcards in item IDs, comma-separated
+alternatives, and `!` exclusions. Exclusions take precedence over every alternative, separately for each
+hand; an excluded off-hand item does not invalidate an allowed main-hand item in either-hand mode.
+An exclusion-only filter accepts any nonempty held item except those excluded. Empty hands never match.
+Examples:
+
+- `@mekanism`: any item registered under `mekanism`.
+- `minecraft:*_pickaxe`: any Minecraft pickaxe ID.
+- `#minecraft:pickaxes, #minecraft:axes`: either tool tag.
+- `@minecraft, !minecraft:stick`: Minecraft items except sticks.
+
+The editor offers suggestions from installed items, their namespaces and the current world's tags, and
+previews whether the held item matches. Click a suggestion to complete the last term; the arrow cycles
+through available suggestions. Unknown item IDs or namespaces and malformed terms cannot be saved.
+Tag names are allowed before they exist in the current world so configs remain portable; unknown tags
+simply do not match. Wildcards apply to item IDs, not tag or mod selectors.
 
 ## Versions
 

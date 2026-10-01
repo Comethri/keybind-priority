@@ -15,6 +15,7 @@ import net.minecraft.client.gui.screens.Screen;
 import net.minecraft.network.chat.CommonComponents;
 import net.minecraft.network.chat.Component;
 import net.minecraft.network.chat.MutableComponent;
+import net.minecraft.world.item.ItemStack;
 import net.neoforged.neoforge.client.settings.IKeyConflictContext;
 import net.neoforged.neoforge.client.settings.KeyConflictContext;
 
@@ -28,17 +29,15 @@ import java.util.Map;
 public final class PriorityScreen extends Screen {
     private static final String LANG = "screen." + KeybindPriority.MOD_ID + ".";
     private static final int ROW_HEIGHT = 24;
-    private static final int LIST_TOP = 56;
-    // Full ARGB: since 1.21.6 text with alpha 0 is invisible.
-    private static final int WHITE = 0xFFFFFFFF;
-    private static final int LIGHT_GRAY = 0xFFA0A0A0;
-    private static final int GRAY = 0xFF808080;
-    private static final int DARK_GRAY = 0xFF707070;
+    private static final int LIST_TOP = 62;
+    private static final int BUTTONS_WIDTH = 137;
 
     private final InputConstants.Key key;
     private final List<KeyMapping> bindings = new ArrayList<>();
     private final List<String> disabled = new ArrayList<>();
+    private final Map<String, ItemCondition> items = new HashMap<>();
     private boolean exclusive;
+    private boolean guideChecked;
 
     public PriorityScreen(InputConstants.Key key) {
         super(Component.translatable(LANG + "title", key.getDisplayName()));
@@ -49,6 +48,7 @@ public final class PriorityScreen extends Screen {
         if (rule != null) {
             exclusive = rule.exclusive;
             disabled.addAll(rule.disabled);
+            items.putAll(rule.items);
         }
 
         List<KeyMapping> onKey = new ArrayList<>();
@@ -73,12 +73,35 @@ public final class PriorityScreen extends Screen {
             exclusive = !exclusive;
             b.setMessage(modeLabel());
             apply();
-        }).bounds(width / 2 - 120, 30, 240, 20).build());
+        }).bounds(width / 2 - 110, 36, 220, 20)
+                .tooltip(Tooltip.create(Component.translatable(LANG + "mode.tooltip"))).build());
+
+        addRenderableWidget(Button.builder(Component.literal("?"), b -> openGuide(0))
+                .bounds(width - 26, 6, 20, 20)
+                .tooltip(Tooltip.create(Component.translatable(LANG + "guide.open"))).build());
 
         addRenderableWidget(new BindingList(minecraft, width, height - LIST_TOP - 32, LIST_TOP));
 
         addRenderableWidget(Button.builder(CommonComponents.GUI_DONE, b -> onClose())
                 .bounds(width / 2 - 100, height - 26, 200, 20).build());
+    }
+
+    @Override
+    public void tick() {
+        super.tick();
+        // Opened from tick, not init: init also runs on resize and while the screen is being set.
+        if (!guideChecked) {
+            guideChecked = true;
+            if (!PriorityConfig.guideSeen()) openGuide(0);
+        }
+    }
+
+    void openGuide(int page) {
+        minecraft.setScreen(new GuideScreen(this, page));
+    }
+
+    boolean exclusive() {
+        return exclusive;
     }
 
     private Component modeLabel() {
@@ -96,6 +119,15 @@ public final class PriorityScreen extends Screen {
         rule.order = new ArrayList<>(bindings.stream().map(KeyMapping::getName).toList());
         rule.disabled.clear();
         rule.disabled.addAll(disabled);
+        rule.items.clear();
+        rule.items.putAll(items);
+    }
+
+    void setItemCondition(String binding, ItemCondition condition) {
+        if (condition == null) items.remove(binding);
+        else items.put(binding, condition);
+        apply();
+        PriorityConfig.save();
     }
 
     private void move(int index, int target) {
@@ -110,21 +142,36 @@ public final class PriorityScreen extends Screen {
         apply();
     }
 
-    /** Index of the binding that wins in exclusive mode (ignoring context), or -1. */
+    /** Preview item conditions while the editor is open; binding contexts apply once back in game. */
     private int topEnabled() {
+        int fallback = -1;
         for (int i = 0; i < bindings.size(); i++) {
-            if (!disabled.contains(bindings.get(i).getName())) return i;
+            String name = bindings.get(i).getName();
+            if (disabled.contains(name)) continue;
+            ItemCondition condition = items.get(name);
+            boolean matches = condition != null && condition.matches();
+            if (condition != null && condition.mode == ItemCondition.Mode.REQUIRE && !matches) continue;
+            if (matches && condition.mode == ItemCondition.Mode.PREFER) return i;
+            if (fallback < 0) fallback = i;
         }
-        return -1;
+        return fallback;
     }
 
     @Override
     public void render(GuiGraphics graphics, int mouseX, int mouseY, float partialTick) {
         super.render(graphics, mouseX, mouseY, partialTick);
-        graphics.drawCenteredString(font, title, width / 2, 8, WHITE);
-        graphics.drawCenteredString(font, Component.translatable(LANG + "hint"), width / 2, 18, LIGHT_GRAY);
+
+        // "Keybind Priority [ V ]", centered as one piece.
+        String heading = Component.translatable(LANG + "heading").getString();
+        String keyName = key.getDisplayName().getString();
+        int headingWidth = font.width(heading) + 6 + Ui.keyWidth(font, keyName);
+        int x = (width - headingWidth) / 2;
+        Compat.get().drawText(graphics, font, heading, x, 10, Ui.WHITE);
+        Ui.key(graphics, font, keyName, x + font.width(heading) + 6, 6);
+
+        graphics.drawCenteredString(font, Component.translatable(LANG + "hint", bindings.size()), width / 2, 24, Ui.MUTED);
         if (bindings.isEmpty()) {
-            graphics.drawCenteredString(font, Component.translatable(LANG + "empty"), width / 2, LIST_TOP + 20, LIGHT_GRAY);
+            graphics.drawCenteredString(font, Component.translatable(LANG + "empty"), width / 2, LIST_TOP + 20, Ui.MUTED);
         }
     }
 
@@ -152,7 +199,7 @@ public final class PriorityScreen extends Screen {
 
         @Override
         public int getRowWidth() {
-            return Math.min(400, width - 24);
+            return Math.min(460, width - 24);
         }
     }
 
@@ -162,6 +209,7 @@ public final class PriorityScreen extends Screen {
         private final Button up;
         private final Button down;
         private final Button onOff;
+        private final Button item;
 
         Row(int index) {
             this.index = index;
@@ -170,6 +218,10 @@ public final class PriorityScreen extends Screen {
             up = Button.builder(Component.literal("▲"), b -> move(index, index - 1)).size(18, 20).build();
             down = Button.builder(Component.literal("▼"), b -> move(index, index + 1)).size(18, 20).build();
             onOff = Button.builder(Component.empty(), b -> toggle(index)).size(36, 20).build();
+            item = Button.builder(Component.translatable(LANG + "item"), b -> {
+                String name = bindings.get(index).getName();
+                minecraft.setScreen(new ItemConditionScreen(PriorityScreen.this, name, items.get(name)));
+            }).size(40, 20).build();
         }
 
         @Override
@@ -177,52 +229,101 @@ public final class PriorityScreen extends Screen {
                            int mouseX, int mouseY, float partialTick) {
             KeyMapping mapping = bindings.get(index);
             boolean off = disabled.contains(mapping.getName());
+            ItemCondition condition = items.get(mapping.getName());
+            boolean itemMatches = condition != null && condition.matches();
+            boolean itemInactive = condition != null && condition.mode == ItemCondition.Mode.REQUIRE && !itemMatches;
             int winner = exclusive ? topEnabled() : -1;
-            boolean suppressed = off || (exclusive && index != winner);
+            boolean suppressed = off || itemInactive || (exclusive && index != winner);
 
-            Compat.get().drawText(graphics, font, (index + 1) + ".", left, rowTop + 3, GRAY);
-            int textLeft = left + 16;
+            String state;
+            int stateColor;
+            int accent;
+            if (off) {
+                state = "state.off";
+                stateColor = accent = Ui.RED;
+            } else if (itemInactive) {
+                state = "state.needs_item";
+                stateColor = Ui.ORANGE;
+                accent = 0;
+            } else if (!exclusive) {
+                state = "state.active";
+                stateColor = accent = Ui.GREEN;
+            } else if (index == winner) {
+                boolean preferred = itemMatches && condition.mode == ItemCondition.Mode.PREFER;
+                state = preferred ? "state.preferred" : "state.active";
+                stateColor = accent = preferred ? Ui.AQUA : Ui.GOLD;
+            } else {
+                state = "state.backup";
+                stateColor = Ui.DIM;
+                accent = 0;
+            }
 
-            MutableComponent name = Component.translatable(mapping.getName());
-            if (index == winner) name = Component.literal("★ ").append(name);
+            int cardLeft = left - 3;
+            int cardRight = left + rowWidth + 1;
+            boolean hovered = mouseX >= cardLeft && mouseX < cardRight && mouseY >= rowTop - 1 && mouseY < rowTop + 21;
+            Ui.card(graphics, cardLeft, rowTop - 1, cardRight, rowTop + 21, accent, hovered);
+
+            Compat.get().drawText(graphics, font, (index + 1) + ".", left + 2, rowTop + 6,
+                    index == winner ? Ui.GOLD : Ui.DIM);
+            int textLeft = left + 18;
+            int buttonsLeft = left + rowWidth - BUTTONS_WIDTH;
+
+            String stateText = Component.translatable(LANG + state).getString();
+            int chipLeft = Ui.chip(graphics, font, stateText, buttonsLeft - 5, rowTop + 1, stateColor);
+
+            int nameLeft = textLeft;
+            if (index == winner) {
+                Compat.get().drawText(graphics, font, "★", textLeft, rowTop + 2, Ui.GOLD);
+                nameLeft += font.width("★ ");
+            }
+            String name = Component.translatable(mapping.getName()).getString();
+            Compat.get().drawText(graphics, font, font.plainSubstrByWidth(name, chipLeft - nameLeft - 4), nameLeft, rowTop + 2,
+                    suppressed ? Ui.MUTED : Ui.WHITE);
 
             MutableComponent info = Compat.get().categoryLabel(mapping).copy()
                     .append(" · ").append(mapping.getTranslatedKeyMessage());
             String context = contextName(mapping.getKeyConflictContext());
             if (context != null) info.append(" · ").append(Component.translatable(LANG + "context." + context));
-            if (suppressed) {
-                info.append(" · ").append(Component.translatable(LANG + (off ? "state.off" : "state.suppressed")));
-            }
-            int buttonsLeft = left + rowWidth - 95;
-            int maxText = buttonsLeft - textLeft - 4;
-            Compat.get().drawText(graphics, font, font.plainSubstrByWidth(name.getString(), maxText), textLeft, rowTop + 3,
-                    suppressed ? GRAY : WHITE);
-            Compat.get().drawText(graphics, font, font.plainSubstrByWidth(info.getString(), maxText), textLeft, rowTop + 13, DARK_GRAY);
+            Compat.get().drawText(graphics, font, font.plainSubstrByWidth(info.getString(), buttonsLeft - textLeft - 5),
+                    textLeft, rowTop + 12, Ui.DIM);
 
             top.active = index > 0;
             up.active = index > 0;
             down.active = index < bindings.size() - 1;
             onOff.setMessage(Component.translatable(LANG + (off ? "off" : "on"))
                     .withStyle(off ? ChatFormatting.RED : ChatFormatting.GREEN));
+            onOff.setTooltip(Tooltip.create(Component.translatable(LANG + (off ? "off.tooltip" : "on.tooltip"))));
+
+            ItemStack icon = condition == null ? ItemStack.EMPTY : condition.icon();
+            item.setMessage(!icon.isEmpty() ? Component.empty() : Component.translatable(LANG + "item")
+                    .withStyle(condition == null ? ChatFormatting.GRAY : ChatFormatting.AQUA));
+            item.setTooltip(Tooltip.create(condition == null ? Component.translatable(LANG + "item.none")
+                    : Component.translatable(LANG + "item.summary",
+                    Component.translatable(LANG + "item.mode." + condition.mode.name().toLowerCase(Locale.ROOT)),
+                    condition.selector,
+                    Component.translatable(LANG + "item.hand." + condition.hand.name().toLowerCase(Locale.ROOT)))));
 
             top.setPosition(buttonsLeft, rowTop);
             up.setPosition(buttonsLeft + 19, rowTop);
             down.setPosition(buttonsLeft + 38, rowTop);
             onOff.setPosition(buttonsLeft + 58, rowTop);
+            item.setPosition(buttonsLeft + 97, rowTop);
             top.render(graphics, mouseX, mouseY, partialTick);
             up.render(graphics, mouseX, mouseY, partialTick);
             down.render(graphics, mouseX, mouseY, partialTick);
             onOff.render(graphics, mouseX, mouseY, partialTick);
+            item.render(graphics, mouseX, mouseY, partialTick);
+            if (!icon.isEmpty()) graphics.renderItem(icon, buttonsLeft + 109, rowTop + 2);
         }
 
         @Override
         public List<? extends GuiEventListener> children() {
-            return List.of(top, up, down, onOff);
+            return List.of(top, up, down, onOff, item);
         }
 
         @Override
         public List<? extends NarratableEntry> narratables() {
-            return List.of(top, up, down, onOff);
+            return List.of(top, up, down, onOff, item);
         }
     }
 }

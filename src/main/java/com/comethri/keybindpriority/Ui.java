@@ -26,9 +26,17 @@ final class Ui {
         return (alpha << 24) | (color & 0x00FFFFFF);
     }
 
+    /** GuiGraphics.renderOutline is missing in 1.21.9 and 1.21.10, so draw the four edges ourselves. */
+    static void outline(GuiGraphics graphics, int x, int y, int w, int h, int color) {
+        graphics.fill(x, y, x + w, y + 1, color);
+        graphics.fill(x, y + h - 1, x + w, y + h, color);
+        graphics.fill(x, y + 1, x + 1, y + h - 1, color);
+        graphics.fill(x + w - 1, y + 1, x + w, y + h - 1, color);
+    }
+
     static void panel(GuiGraphics graphics, int x1, int y1, int x2, int y2) {
         graphics.fill(x1, y1, x2, y2, PANEL);
-        graphics.renderOutline(x1, y1, x2 - x1, y2 - y1, PANEL_EDGE);
+        outline(graphics, x1, y1, x2 - x1, y2 - y1, PANEL_EDGE);
     }
 
     static int chipWidth(Font font, String text) {
@@ -39,7 +47,7 @@ final class Ui {
     static int chip(GuiGraphics graphics, Font font, String text, int right, int y, int color) {
         int left = right - chipWidth(font, text);
         graphics.fill(left, y, right, y + 11, withAlpha(color, 0x30));
-        graphics.renderOutline(left, y, right - left, 11, withAlpha(color, 0x90));
+        outline(graphics, left, y, right - left, 11, withAlpha(color, 0x90));
         Compat.get().drawText(graphics, font, text, left + 4, y + 2, color);
         return left;
     }
@@ -53,7 +61,7 @@ final class Ui {
         int w = keyWidth(font, key);
         graphics.fill(x, y, x + w, y + 14, 0xFF202028);
         graphics.fill(x, y + 12, x + w, y + 14, 0xFF101014);
-        graphics.renderOutline(x, y, w, 14, withAlpha(GOLD, 0xC0));
+        outline(graphics, x, y, w, 14, withAlpha(GOLD, 0xC0));
         Compat.get().drawText(graphics, font, key, x + 5, y + 3, GOLD);
     }
 

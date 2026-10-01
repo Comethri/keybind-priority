@@ -163,7 +163,7 @@ public final class GuideScreen extends Screen {
 
     private void mockButton(GuiGraphics graphics, int x, int y, int w, String label, int color) {
         graphics.fill(x, y, x + w, y + 18, 0xFF5A5A5A);
-        graphics.renderOutline(x, y, w, 18, 0xFF000000);
+        Ui.outline(graphics, x, y, w, 18, 0xFF000000);
         graphics.fill(x + 1, y + 1, x + w - 1, y + 2, 0xFF8A8A8A);
         if (!label.isEmpty()) graphics.drawCenteredString(font, label, x + w / 2, y + 5, color);
     }

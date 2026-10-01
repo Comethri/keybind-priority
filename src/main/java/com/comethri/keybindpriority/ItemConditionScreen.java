@@ -158,7 +158,7 @@ public final class ItemConditionScreen extends Screen {
         Ui.panel(graphics, left - PAD, top, left + editorWidth + PAD, top + PANEL_HEIGHT);
         // Icon slot next to the filter field.
         graphics.fill(left, top + 48, left + 20, top + 68, 0xFF000000);
-        graphics.renderOutline(left, top + 48, 20, 20, 0xFFA0A0A0);
+        Ui.outline(graphics, left, top + 48, 20, 20, 0xFFA0A0A0);
         // Divider above the action buttons.
         graphics.fill(left, top + 168, left + editorWidth, top + 169, 0xFF3C3C48);
     }
